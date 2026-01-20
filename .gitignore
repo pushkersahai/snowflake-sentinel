@@ -1,0 +1,22 @@
+# Virtual environment
+venv/
+*.pyc
+__pycache__/
+
+# Environment variables
+.env
+
+# Streamlit cache
+.streamlit/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Business/confidential documentation (keep private)
+docs/business/
+docs/technical/

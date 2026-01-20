@@ -8,7 +8,7 @@ load_dotenv()
 class ForensicAgent:
     """
     Investigates failed tasks by analyzing query text and error messages.
-    Uses Claude to diagnose root cause and propose SQL fixes.
+    Uses Claude to diagnose root cause and propose SQL fixes with explicit reasoning chain.
     """
     
     def __init__(self):
@@ -83,13 +83,35 @@ class ForensicAgent:
     
     def investigate_with_claude(self, failure_context):
         """
-        Send failure context to Claude for root cause analysis and fix proposal.
+        Send failure context to Claude for root cause analysis with explicit reasoning chain.
         
         Args:
             failure_context: Dict with query_text, error_message, table_ddl
+        
+        Returns:
+            Dict with diagnosis and reasoning_steps
         """
         
-        prompt = f"""You are a Snowflake SQL expert analyzing a failed task.
+        prompt = f"""You are a senior database engineer performing root cause analysis on a failed Snowflake task.
+
+Follow this reasoning process and document each step:
+
+STEP 1 - ANALYZE ERROR
+Examine the error message and identify the specific failure type.
+
+STEP 2 - CONTEXT CHECK  
+Review the SQL query and table DDL to understand what the query was attempting to do.
+
+STEP 3 - ROOT CAUSE IDENTIFICATION
+Determine the exact condition that triggered the failure.
+
+STEP 4 - PROPOSE FIX
+Provide the corrected SQL query with inline comments explaining the changes.
+
+STEP 5 - VALIDATION
+Explain why this fix resolves the issue and what edge cases it handles.
+
+---
 
 FAILED QUERY:
 {failure_context['query_text']}
@@ -97,35 +119,103 @@ FAILED QUERY:
 ERROR MESSAGE:
 {failure_context['error_message']}
 
-TABLE DDL (if available):
+TABLE DDL:
 {failure_context.get('table_ddl', 'Not available')}
 
-Please provide:
-1. ROOT CAUSE: Explain what caused this failure in 2-3 sentences
-2. FIXED SQL: Provide the corrected SQL query
-3. EXPLANATION: Explain what you changed and why
+---
 
-Format your response clearly with these three sections."""
+Provide your analysis following the 5-step structure above. Be specific and technical."""
 
         try:
             message = self.claude.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=1000,
+                max_tokens=1500,
                 messages=[
                     {"role": "user", "content": prompt}
                 ]
             )
             
-            return message.content[0].text
+            response_text = message.content[0].text
+            
+            # Parse reasoning steps
+            reasoning_steps = self._parse_reasoning_steps(response_text)
+            
+            return {
+                'full_analysis': response_text,
+                'reasoning_steps': reasoning_steps,
+                'fixed_sql': self._extract_fixed_sql(response_text)
+            }
             
         except Exception as e:
             print(f"Claude API error: {str(e)}")
             return None
     
+    def _parse_reasoning_steps(self, response_text):
+        """Extract structured reasoning steps from Claude's response"""
+        
+        steps = {
+            'step1_analyze_error': '',
+            'step2_context_check': '',
+            'step3_root_cause': '',
+            'step4_propose_fix': '',
+            'step5_validation': ''
+        }
+        
+        step_markers = [
+            ('STEP 1', 'step1_analyze_error'),
+            ('STEP 2', 'step2_context_check'),
+            ('STEP 3', 'step3_root_cause'),
+            ('STEP 4', 'step4_propose_fix'),
+            ('STEP 5', 'step5_validation')
+        ]
+        
+        for i, (marker, key) in enumerate(step_markers):
+            if marker in response_text:
+                start = response_text.find(marker)
+                # Find the next step marker or end of text
+                if i + 1 < len(step_markers):
+                    next_marker = step_markers[i + 1][0]
+                    end = response_text.find(next_marker) if next_marker in response_text else len(response_text)
+                else:
+                    end = len(response_text)
+                
+                steps[key] = response_text[start:end].strip()
+        
+        return steps
+    
+    def _extract_fixed_sql(self, response_text):
+        """Extract fixed SQL from response"""
+        
+        # Look for SQL code blocks
+        if '```sql' in response_text:
+            parts = response_text.split('```sql')
+            if len(parts) > 1:
+                sql_part = parts[1].split('```')[0]
+                return sql_part.strip()
+        
+        # Fallback: look for SELECT statements in STEP 4
+        if 'STEP 4' in response_text:
+            step4_section = response_text.split('STEP 4')[1]
+            if 'SELECT' in step4_section.upper():
+                # Extract first complete SELECT statement
+                lines = step4_section.split('\n')
+                sql_lines = []
+                in_sql = False
+                for line in lines:
+                    if 'SELECT' in line.upper():
+                        in_sql = True
+                    if in_sql:
+                        sql_lines.append(line)
+                        if ';' in line:
+                            break
+                return '\n'.join(sql_lines).strip()
+        
+        return None
+    
     def investigate(self, task_name, query_id, database, schema, error_message):
         """
         Full investigation workflow for a failed task.
-        Returns diagnosis and proposed fix.
+        Returns diagnosis and proposed fix with reasoning chain.
         """
         
         print(f"\nInvestigating: {task_name}")
@@ -159,7 +249,9 @@ Format your response clearly with these three sections."""
             'task_name': task_name,
             'query_text': query_details['query_text'],
             'error_message': error_message,
-            'diagnosis': diagnosis,
+            'diagnosis': diagnosis['full_analysis'] if diagnosis else None,
+            'reasoning_steps': diagnosis['reasoning_steps'] if diagnosis else {},
+            'fixed_sql': diagnosis['fixed_sql'] if diagnosis else None,
             'execution_time_ms': query_details['execution_time']
         }
     
@@ -197,7 +289,18 @@ if __name__ == "__main__":
             print("\n" + "="*60)
             print(f"TASK: {result['task_name']}")
             print("="*60)
-            print(result['diagnosis'])
+            
+            if result.get('reasoning_steps'):
+                for step_key, step_text in result['reasoning_steps'].items():
+                    if step_text:
+                        print(f"\n{step_text}\n")
+            else:
+                print(result['diagnosis'])
+            
+            if result.get('fixed_sql'):
+                print("\nFIXED SQL:")
+                print(result['fixed_sql'])
+            
             print("\n")
         
         forensic.close()

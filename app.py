@@ -25,29 +25,24 @@ def run_detection():
         st.session_state.results = results
     return results
 
-def extract_fixed_sql(diagnosis_text):
-    """Extract fixed SQL from Claude's diagnosis"""
-    if not diagnosis_text or "FIXED SQL:" not in diagnosis_text:
+def extract_fixed_sql(investigation):
+    """Extract fixed SQL from investigation results"""
+    # First try the parsed fixed_sql field
+    if 'fixed_sql' in investigation and investigation['fixed_sql']:
+        return investigation['fixed_sql']
+    
+    # Fallback to parsing diagnosis text
+    diagnosis_text = investigation.get('diagnosis', '')
+    if not diagnosis_text:
         return None
     
-    parts = diagnosis_text.split("FIXED SQL:")
-    if len(parts) > 1:
-        sql_section = parts[1].split("EXPLANATION:")[0] if "EXPLANATION:" in parts[1] else parts[1]
-        cleaned = sql_section.strip()
-        cleaned = cleaned.replace("```sql", "").replace("```", "")
-        return cleaned.strip()
-    return None
-
-def extract_root_cause(diagnosis_text):
-    """Extract root cause from Claude's diagnosis"""
-    if not diagnosis_text or "ROOT CAUSE:" not in diagnosis_text:
-        return "Analysis in progress..."
+    if "```sql" in diagnosis_text:
+        parts = diagnosis_text.split("```sql")
+        if len(parts) > 1:
+            sql_section = parts[1].split("```")[0]
+            return sql_section.strip()
     
-    parts = diagnosis_text.split("ROOT CAUSE:")
-    if len(parts) > 1:
-        cause_section = parts[1].split("FIXED SQL:")[0] if "FIXED SQL:" in parts[1] else parts[1]
-        return cause_section.strip()
-    return "Analysis in progress..."
+    return None
 
 def main():
     init_session_state()
@@ -136,13 +131,45 @@ def main():
         
         st.markdown(f"### Task: `{selected['task_name']}`")
         
-        diagnosis_text = selected['investigation']['diagnosis']
-        root_cause = extract_root_cause(diagnosis_text)
-        fixed_sql = extract_fixed_sql(diagnosis_text)
-        original_sql = selected['investigation']['query_text']
+        investigation = selected['investigation']
+        fixed_sql = extract_fixed_sql(investigation)
+        original_sql = investigation['query_text']
         
-        st.markdown("#### 🤖 AI Diagnosis")
-        st.info(root_cause)
+        st.markdown("#### 🤖 Agent Reasoning Chain")
+        
+        reasoning_steps = investigation.get('reasoning_steps', {})
+        
+        if reasoning_steps and any(reasoning_steps.values()):
+            # Step 1: Analyze Error
+            with st.expander("**STEP 1: Analyze Error**", expanded=True):
+                step1 = reasoning_steps.get('step1_analyze_error', 'Not available')
+                st.markdown(step1)
+            
+            # Step 2: Context Check
+            with st.expander("**STEP 2: Context Check**"):
+                step2 = reasoning_steps.get('step2_context_check', 'Not available')
+                st.markdown(step2)
+            
+            # Step 3: Root Cause
+            with st.expander("**STEP 3: Root Cause Identification**", expanded=True):
+                step3 = reasoning_steps.get('step3_root_cause', 'Not available')
+                st.markdown(step3)
+            
+            # Step 4: Proposed Fix
+            with st.expander("**STEP 4: Propose Fix**", expanded=True):
+                step4 = reasoning_steps.get('step4_propose_fix', 'Not available')
+                st.markdown(step4)
+            
+            # Step 5: Validation
+            with st.expander("**STEP 5: Validation**"):
+                step5 = reasoning_steps.get('step5_validation', 'Not available')
+                st.markdown(step5)
+        else:
+            # Fallback to old format
+            diagnosis_text = investigation.get('diagnosis', 'Analysis not available')
+            st.info(diagnosis_text)
+        
+        st.markdown("---")
         
         st.markdown("#### SQL Comparison")
         

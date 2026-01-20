@@ -195,7 +195,6 @@ The system uses explicit sequencing (Sentry → Forensic → CFO) rather than au
 - Reduced LLM API costs (1 call vs. 5-10 for agentic orchestration)
 - Consistent audit trails
 
-See [ADR-001](docs/technical/ADR-001-Why-Deterministic-Orchestration.md) for detailed rationale.
 
 ### Prompt Engineering Strategy
 

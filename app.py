@@ -2,6 +2,16 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from sentinel_crew import SnowflakeSentinelCrew
+import os
+
+# Load secrets for Streamlit Cloud deployment
+# This makes st.secrets available as environment variables
+if hasattr(st, 'secrets'):
+    try:
+        for key in st.secrets.keys():
+            os.environ[key] = str(st.secrets[key])
+    except:
+        pass
 
 st.set_page_config(
     page_title="Snowflake Sentinel",

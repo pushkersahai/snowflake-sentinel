@@ -1,6 +1,22 @@
 # Snowflake Sentinel
 
+**🔗 [Live Demo](https://app-sentinel-i7b4ylrhecyruwwvanqrpp.streamlit.app/)** | ** [Source Code](https://github.com/pushkersahai/snowflake-sentinel)**
+
 A multi-agent system for automated detection and analysis of failed Snowflake tasks using Large Language Models.
+
+> **Note:** The live demo runs in cached mode with pre-analyzed results for demonstration purposes. The full system connects to Snowflake and Claude APIs for real-time analysis.
+*Interactive dashboard showing AI-powered failure detection and diagnostic reasoning*
+## Screenshots
+
+### Dashboard & Pulse Metrics
+![Pulse Metrics](docs/images/screenshot-1.png)
+
+### Incident Feed
+![Incident Feed](docs/images/screenshot-2.png)
+
+### AI Reasoning Chain
+![Reasoning Chain](docs/images/screenshot-3.png)
+
 
 ## Overview
 

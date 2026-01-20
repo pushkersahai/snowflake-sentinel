@@ -1,12 +1,15 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from sentinel_crew import SnowflakeSentinelCrew
 import os
 from demo_data import DEMO_RESULTS
 
 # Demo mode configuration
 DEMO_MODE = True  # Set to False for live Snowflake/Claude APIs
+
+# Only import crew in live mode to avoid dependency errors in demo
+if not DEMO_MODE:
+    from sentinel_crew import SnowflakeSentinelCrew
 
 # Load secrets for Streamlit Cloud deployment
 if hasattr(st, 'secrets'):
@@ -24,13 +27,14 @@ st.set_page_config(
 
 def init_session_state():
     """Initialize session state variables"""
-    if not DEMO_MODE:
-        if 'crew' not in st.session_state:
-            st.session_state.crew = SnowflakeSentinelCrew()
     if 'results' not in st.session_state:
         st.session_state.results = None
     if 'selected_task' not in st.session_state:
         st.session_state.selected_task = None
+    if not DEMO_MODE:
+        if 'crew' not in st.session_state:
+            from sentinel_crew import SnowflakeSentinelCrew
+            st.session_state.crew = SnowflakeSentinelCrew()
 
 def run_detection():
     """Run the detection and investigation workflow"""

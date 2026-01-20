@@ -3,9 +3,12 @@ import pandas as pd
 from datetime import datetime
 from sentinel_crew import SnowflakeSentinelCrew
 import os
+from demo_data import DEMO_RESULTS
+
+# Demo mode configuration
+DEMO_MODE = True  # Set to False for live Snowflake/Claude APIs
 
 # Load secrets for Streamlit Cloud deployment
-# This makes st.secrets available as environment variables
 if hasattr(st, 'secrets'):
     try:
         for key in st.secrets.keys():
@@ -21,8 +24,9 @@ st.set_page_config(
 
 def init_session_state():
     """Initialize session state variables"""
-    if 'crew' not in st.session_state:
-        st.session_state.crew = SnowflakeSentinelCrew()
+    if not DEMO_MODE:
+        if 'crew' not in st.session_state:
+            st.session_state.crew = SnowflakeSentinelCrew()
     if 'results' not in st.session_state:
         st.session_state.results = None
     if 'selected_task' not in st.session_state:
@@ -30,10 +34,17 @@ def init_session_state():
 
 def run_detection():
     """Run the detection and investigation workflow"""
-    with st.spinner('Detecting failures and running AI analysis...'):
-        results = st.session_state.crew.run_investigation()
-        st.session_state.results = results
-    return results
+    if DEMO_MODE:
+        with st.spinner('Loading demo data...'):
+            import time
+            time.sleep(1)  # Simulate processing time
+            st.session_state.results = DEMO_RESULTS
+        return DEMO_RESULTS
+    else:
+        with st.spinner('Detecting failures and running AI analysis...'):
+            results = st.session_state.crew.run_investigation()
+            st.session_state.results = results
+        return results
 
 def extract_fixed_sql(investigation):
     """Extract fixed SQL from investigation results"""
@@ -59,6 +70,9 @@ def main():
     
     st.title("🎯 Snowflake Sentinel")
     st.markdown("### AI-Powered Task Healing & Cost Optimization")
+    
+    if DEMO_MODE:
+        st.warning("⚠️ **Demo Mode** - Showing cached results from actual analysis runs. No live API calls are made. [View source code on GitHub](https://github.com/pushkersahai/snowflake-sentinel)")
     
     st.markdown("---")
     
@@ -225,7 +239,10 @@ def main():
         with deploy_col1:
             if fixed_sql and st.button("✅ Approve & Deploy Fix", type="primary", use_container_width=True):
                 st.success(f"Fix approved for {selected['task_name']}")
-                st.info("In production, this would execute the fixed SQL in Snowflake")
+                if DEMO_MODE:
+                    st.info("Demo Mode: In production, this would execute the fixed SQL in Snowflake and update the task definition.")
+                else:
+                    st.info("In production, this would execute the fixed SQL in Snowflake")
                 st.balloons()
         
         with deploy_col2:

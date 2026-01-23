@@ -1,12 +1,23 @@
-# Snowflake Sentinel
+# Snowflake Sentinel — AI-Powered Task Failure Detection & Diagnosis
 
-**🔗 [Live Demo](https://app-sentinel-i7b4ylrhecyruwwvanqrpp.streamlit.app/)** | ** [Source Code](https://github.com/pushkersahai/snowflake-sentinel)**
+**Live Demo:** https://app-sentinel-i7b4ylrhecyruwwvanqrpp.streamlit.app/  
+**Source:** https://github.com/pushkersahai/snowflake-sentinel
 
-LLM agent that diagnoses failed Snowflake tasks + suggests fixes (FinOps/DataOps).LLM agent that diagnoses failed Snowflake tasks + suggests fixes (FinOps/DataOps).
+Snowflake Sentinel is a **multi-agent DataOps/FinOps assistant** that detects failed Snowflake tasks, performs **LLM-assisted root cause analysis**, and estimates **compute-credit impact**—with an optional human-in-the-loop workflow for production use.
 
-> **Note:** The live demo runs in cached mode with pre-analyzed results for demonstration purposes. The full system connects to Snowflake and Claude APIs for real-time analysis.
-*Interactive dashboard showing AI-powered failure detection and diagnostic reasoning*
-## Screenshots
+> **Demo note:** The public Streamlit demo runs in **cached mode** with pre-analyzed results.  
+> The full system connects to **Snowflake ACCOUNT_USAGE** + **Anthropic Claude** for real-time analysis.
+
+---
+
+## Why this exists
+
+When scheduled tasks fail, teams lose time in triage and risk downstream pipeline breakage.
+Sentinel helps by:
+- **Surfacing unique failures** (deduped by task)
+- **Explaining root cause** (error + query + schema context)
+- **Recommending a fix** (corrected SQL + rationale)
+- **Quantifying impact** (credits per run + annualized projection)
 
 ### Dashboard & Pulse Metrics
 ![Pulse Metrics](docs/images/screenshot-1.png)
